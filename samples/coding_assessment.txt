@@ -1,0 +1,7 @@
+Python Coding Assessment (synthetic sample)
+Use only the Python standard library. Give every function a short docstring.
+
+1. Write a Python function is_palindrome(s) that returns True if the string reads the same forwards and backwards, ignoring case and any characters that are not letters or digits.
+2. Write a Python function fizzbuzz(n) that returns a list of strings for the numbers 1 to n: "Fizz" for multiples of 3, "Buzz" for multiples of 5, "FizzBuzz" for multiples of both, otherwise the number as a string.
+3. Write a Python function word_count(text) that returns a dictionary of how many times each word appears, ignoring case and punctuation.
+4. Write a Python function second_largest(nums) that returns the second largest distinct value in a list of numbers, or None if there is no such value.

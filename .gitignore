@@ -1,0 +1,13 @@
+# secrets and local state: never commit these
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+.pytest_cache/
+*.db
+*.db-journal
+taskwrite.db*
+workspaces/
+mcp_servers.json
+*.log

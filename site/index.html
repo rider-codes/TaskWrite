@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TaskWrite: the assignment agent that asks first</title>
+<meta name="description" content="TaskWrite is an open-source, local-first agent that completes assignments in your own apps (VS Code, Word, email drafts) and asks your approval at every step.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=63">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="logo" href="index.html" aria-label="TaskWrite home">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#14161b"/><path d="M14 9 H34 L45 20 V49 Q45 52 42 52 H17 Q14 52 14 49 Z" fill="#f6f4ee"/><path d="M34 9 V20 H45 Z" fill="#cfcbbd"/><rect x="19" y="27" width="19" height="3" rx="1.5" fill="#c4c0b2"/><rect x="19" y="34" width="13" height="3" rx="1.5" fill="#c4c0b2"/><circle cx="46" cy="46" r="13" fill="#4ade80" stroke="#14161b" stroke-width="3.5"/><path d="M39.8 46 L44.2 50.4 L52.6 40.8" fill="none" stroke="#14161b" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      taskwrite <small>BETA</small>
+    </a>
+    <nav class="links" aria-label="Main">
+      <a class="active" href="index.html">Home</a>
+      <a href="index.html#faq">FAQ</a>
+    </nav>
+    <span class="spacer"></span>
+    <a class="btn outline sm" href="how-it-works.html">See how it works</a>
+    <a class="btn sm github-link" href="https://github.com/YOUR-USERNAME/TaskWrite" aria-label="TaskWrite on GitHub">
+      <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
+  </div>
+</header>
+
+<main>
+<section class="hero hero-tpl">
+  <div class="float f-assign" data-depth="16" aria-hidden="true">
+    <div class="face">
+      <span class="tag">ASSIGNMENT · QUIZ 3</span>
+      <h4>Python basics</h4>
+      <div class="check"><i class="on"></i>Q1 Compute 12 × (3 + 4)</div>
+      <div class="check"><i class="on"></i>Q2 Write letter_grade(mark)</div>
+      <div class="check"><i></i>Q3 Explain why averages hide weak students</div>
+    </div>
+  </div>
+  <div class="float f-plan" data-depth="22" aria-hidden="true">
+    <span class="tag">PLAN · STEP 2 OF 4</span>
+    <h4>Write letter_grade() in VS Code</h4>
+    <p>Needs <b>model</b> and <b>vscode</b>. Nothing runs until you say yes.</p>
+    <div class="meter"><span class="bars"><i></i><i></i><i></i><i></i><i class="off"></i><i class="off"></i><i class="off"></i><i class="off"></i></span><em>4 / 8</em> step budget</div>
+  </div>
+  <div class="float f-code" data-depth="26" aria-hidden="true">
+    <div class="bar"><s></s><s></s><s></s>&nbsp;q2_solution.py</div>
+<pre><span class="k">def</span> letter_grade(mark):
+    <span class="k">if</span> mark &gt;= 80:
+        <span class="k">return</span> <span class="s">"A"</span>
+    <span class="c"># ...checked, then opened</span></pre>
+  </div>
+  <div class="float f-mail" data-depth="18" aria-hidden="true">
+    <span class="tag red">EMAIL · DRAFT ONLY</span>
+    <div class="row"><span class="label">To</span><span>ms.rao@school.edu</span></div>
+    <div class="row"><span class="label">Attach</span><span>passage.docx</span></div>
+    <span class="go">Open draft in my mail app</span>
+  </div>
+
+  <div class="float f-tools" data-depth="12" aria-hidden="true"><span class="tag">TOOLS · YOU DECIDE</span><div class="trow"><span>model</span><i class="tg on"></i></div><div class="trow"><span>vscode</span><i class="tg on"></i></div><div class="trow"><span>code_runner</span><i class="tg on"></i></div></div>
+  <div class="float f-ask" data-depth="20" aria-hidden="true"><span class="tag">ASKS YOU, NEVER GUESSES</span><p>Which function should I write first?</p><span class="fakein">is_palindrome</span></div>
+  <div class="float f-chip f-chip1" data-depth="10" aria-hidden="true"><i class="ck"></i>code ran without errors</div>
+  <div class="float f-chip f-chip2" data-depth="14" aria-hidden="true"><i class="ck"></i>saved q2_solution.py, asked VS Code to open it</div>
+
+  <div class="center">
+    <h1 class="display">
+      <span class="q" id="ask" aria-live="polite">Have a coding assessment to complete?</span>
+      <span class="a">Let TaskWrite <span class="dots">complete it.</span>
+    </h1>
+    <ul class="sr-only"><li>Have a coding assessment to complete?</li><li>Have an essay to write?</li><li>Have an email to send?</li></ul>
+    <p class="lede">Upload it, approve the plan, and TaskWrite does the work in your own apps.</p>
+    <div class="cta">
+      <a class="btn github-link" href="https://github.com/YOUR-USERNAME/TaskWrite">
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        Download from GitHub <span aria-hidden="true">→</span></a>
+    </div>
+  </div>
+  <button class="motion-toggle" id="motionToggle" type="button" aria-pressed="false"><span class="mi" aria-hidden="true">❚❚</span><span class="ml">Pause animations</span></button>
+</section>
+
+<div class="strip">
+  <div class="marquee" aria-hidden="true"><div class="grp"><span>Ollama</span><span>FastAPI</span><span>LangGraph</span><span>SQLite</span><span>PyMuPDF</span><span>python-docx</span><span>Pydantic</span><span>VS Code</span><span>Word</span><span>Ollama</span><span>FastAPI</span><span>LangGraph</span><span>SQLite</span><span>PyMuPDF</span><span>python-docx</span><span>Pydantic</span><span>VS Code</span><span>Word</span><span>Ollama</span><span>FastAPI</span><span>LangGraph</span><span>SQLite</span><span>PyMuPDF</span><span>python-docx</span><span>Pydantic</span><span>VS Code</span><span>Word</span></div><div class="grp"><span>Ollama</span><span>FastAPI</span><span>LangGraph</span><span>SQLite</span><span>PyMuPDF</span><span>python-docx</span><span>Pydantic</span><span>VS Code</span><span>Word</span><span>Ollama</span><span>FastAPI</span><span>LangGraph</span><span>SQLite</span><span>PyMuPDF</span><span>python-docx</span><span>Pydantic</span><span>VS Code</span><span>Word</span><span>Ollama</span><span>FastAPI</span><span>LangGraph</span><span>SQLite</span><span>PyMuPDF</span><span>python-docx</span><span>Pydantic</span><span>VS Code</span><span>Word</span></div></div>
+  <ul class="sr-only"><li>Ollama</li><li>FastAPI</li><li>LangGraph</li><li>SQLite</li><li>PyMuPDF</li><li>python-docx</li><li>Pydantic</li><li>VS Code</li><li>Word</li></ul>
+</div>
+
+<section class="block alt-band" id="faq">
+  <div class="wrap">
+    <h2 class="title">Questions people ask</h2>
+    <div class="faq-grid">
+      <details class="faq" open><summary>Does it submit my work for me?</summary><p>No. It produces a deliverable for you to review. It never submits to a school platform, and email only opens a draft in your mail app that you read and send yourself.</p></details>
+      <details class="faq"><summary>Is my assignment sent to the cloud?</summary><p>Not by default. It runs a model on your own computer through Ollama, so the text stays on your machine. Cloud models are optional, need your own API key, and ask for your consent before any text leaves your computer.</p></details>
+      <details class="faq"><summary>Do I have to pay for anything?</summary><p>No. Neither TaskWrite nor Ollama costs anything. The only possible cost is a cloud model, and only if you choose to add your own API key later.</p></details>
+      <details class="faq"><summary>What do I need to run it?</summary><p>Python 3.12, Ollama with a model installed, and a modern browser. VS Code and Word are optional and only used if you approve them. Speed and answer quality depend on your computer and the model you pick.</p></details>
+      <details class="faq"><summary>How good are the answers?</summary><p>That depends on the model. Small local models run on your own computer but make mistakes. TaskWrite checks that every requirement was addressed and labels what it could not verify, so read everything before you use it.</p></details>
+      <details class="faq"><summary>What can it do on my computer?</summary><p>Only what you approve for that assignment: the model, a calculator, a Python runner, VS Code, Word and an email draft. The Python runner uses a separate process with a timeout, but it is not a hardened sandbox, so approve it only for code you are happy to run.</p></details>
+      <details class="faq"><summary>What if it gets stuck or runs out of steps?</summary><p>If it needs something only you know, such as your topic or data, it pauses and asks. Every model call and retry counts against a fixed step budget (8 by default). At the cap it stops, saves its progress and shows what is left, and you choose whether to continue.</p></details>
+      <details class="faq"><summary>Which files can I upload?</summary><p>PDF, DOCX and TXT. Scanned or image-only files need OCR, which isn't supported yet. Text in an uploaded file is treated as data: lines that look like instructions aimed at an AI are flagged and kept away from the model.</p></details>
+      <details class="faq"><summary>Is it okay to use for my coursework?</summary><p>That depends on your school's rules, and you are responsible for following them. TaskWrite is a drafting and learning aid. Check what your course allows, and understand and review everything before you hand it in.</p></details>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer><div class="wrap"><span class="logo" style="font-size:14px">taskwrite</span><span class="spacer"></span><a class="github-link" href="https://github.com/YOUR-USERNAME/TaskWrite">GitHub</a></div></footer>
+
+<script src="site.js?v=63"></script>
+</body>
+</html>

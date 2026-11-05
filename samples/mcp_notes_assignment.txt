@@ -1,0 +1,3 @@
+Study group follow-up (synthetic sample)
+1. Read the note called meeting.txt and summarise the agenda in two sentences.
+2. List who is responsible for each action item.

@@ -1,0 +1,75 @@
+{
+  "mcpServers": {
+    "notes": {
+      "command": "python",
+      "args": [
+        "samples/notes_mcp_server.py"
+      ],
+      "env": {
+        "NOTES_DIR": "samples/notes"
+      }
+    },
+    "vscode": {
+      "url": "http://127.0.0.1:3000/mcp"
+    },
+    "gmail": {
+      "command": "uvx",
+      "args": [
+        "workspace-mcp",
+        "--single-user",
+        "--permissions",
+        "gmail:drafts",
+        "--disabled-tools",
+        "search_gmail_messages",
+        "get_gmail_message_content",
+        "get_gmail_messages_content_batch",
+        "get_gmail_thread_content",
+        "get_gmail_threads_content_batch",
+        "get_gmail_attachment_content",
+        "list_gmail_labels",
+        "manage_gmail_label",
+        "modify_gmail_message_labels",
+        "batch_modify_gmail_message_labels"
+      ],
+      "env": {
+        "GOOGLE_OAUTH_CLIENT_ID": "${GOOGLE_OAUTH_CLIENT_ID}",
+        "GOOGLE_OAUTH_CLIENT_SECRET": "${GOOGLE_OAUTH_CLIENT_SECRET}",
+        "WORKSPACE_MCP_PORT": "8765",
+        "USER_GOOGLE_EMAIL": "${USER_GOOGLE_EMAIL}"
+      }
+    },
+    "gdocs": {
+      "command": "uvx",
+      "args": [
+        "workspace-mcp",
+        "--single-user",
+        "--permissions",
+        "docs:full",
+        "--disabled-tools",
+        "batch_update_doc",
+        "create_table_with_data",
+        "debug_table_structure",
+        "export_doc_to_pdf",
+        "find_and_replace_doc",
+        "get_doc_as_markdown",
+        "get_doc_content",
+        "insert_doc_elements",
+        "insert_doc_image",
+        "inspect_doc_structure",
+        "list_docs_in_folder",
+        "list_document_comments",
+        "manage_doc_tab",
+        "modify_doc_text",
+        "search_docs",
+        "update_doc_headers_footers",
+        "update_paragraph_style"
+      ],
+      "env": {
+        "GOOGLE_OAUTH_CLIENT_ID": "${GOOGLE_OAUTH_CLIENT_ID}",
+        "GOOGLE_OAUTH_CLIENT_SECRET": "${GOOGLE_OAUTH_CLIENT_SECRET}",
+        "WORKSPACE_MCP_PORT": "8765",
+        "USER_GOOGLE_EMAIL": "${USER_GOOGLE_EMAIL}"
+      }
+    }
+  }
+}

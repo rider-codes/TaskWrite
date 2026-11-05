@@ -1,0 +1,2 @@
+Study group follow-up, saving a note (synthetic sample)
+1. Save a note called summary.txt that says: Review chapter 4 and split the lab report sections.

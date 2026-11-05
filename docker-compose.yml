@@ -1,0 +1,23 @@
+services:
+  taskwrite:
+    build: .
+    ports:
+      # Published on this computer only, not on your network.
+      - "127.0.0.1:8000:8000"
+    env_file:
+      - path: .env
+        required: false          # the app also works without a .env file (Ollama only, no API keys)
+    environment:
+      # Reach Ollama running on the host machine.
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      # Inside this container there is no Docker to start a stricter sandbox with, so generated code runs in the
+      # restricted-process mode. Settings shows this honestly. For Docker-isolated code, run TaskWrite directly
+      # on your computer (see the README) with Docker Desktop installed.
+      SANDBOX_DOCKER: "off"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # makes the host name work on Linux too
+    volumes:
+      - taskwrite-data:/data
+    restart: unless-stopped
+volumes:
+  taskwrite-data:

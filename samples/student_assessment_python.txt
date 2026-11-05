@@ -1,0 +1,15 @@
+Student Assessment with Python (synthetic sample)
+Use at most 400 words in your written explanations.
+
+Class marks (out of 100):
+Name | Maths | Physics | English
+Asha | 78 | 82 | 91
+Ben | 55 | 61 | 70
+Chen | 92 | 88 | 84
+Dara | 40 | 47 | 58
+Eli | 67 | 73 | 65
+
+1. Compute the average of Asha's three marks: (78 + 82 + 91) / 3.
+2. Write a Python function letter_grade(mark) that returns "A" for 80 and above, "B" for 65 to 79, "C" for 50 to 64 and "F" below 50.
+3. Write a Python function class_average(marks) that takes a list of numbers and returns their mean.
+4. Explain in two or three sentences why the average alone can hide weak students in a class.

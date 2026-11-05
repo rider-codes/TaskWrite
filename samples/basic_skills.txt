@@ -1,0 +1,5 @@
+﻿Sample Assignment: Basic Skills (synthetic, for demos)
+Keep the total answer under 200 words.
+1. Compute 15 * (4 + 6) - 20.
+2. Explain in two sentences why ice floats on water.
+3. Write a Python function is_even(n) that returns True for even integers.

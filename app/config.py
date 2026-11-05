@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 DEFAULT_MAX_STEPS = 8
+LOCAL_HOSTS = ("127.0.0.1", "localhost", "::1")
 
 
 def load_dotenv(path: Path = Path(".env")) -> None:
@@ -50,6 +51,8 @@ class Settings:
     anthropic_model: str = ""
     openai_api_key: str = field(default="", repr=False)
     anthropic_api_key: str = field(default="", repr=False)
+    # Host names this server answers to. Anything else is refused, which stops DNS-rebinding attacks.
+    allowed_hosts: tuple[str, ...] = LOCAL_HOSTS
 
     @property
     def db_path(self) -> str:
@@ -83,4 +86,5 @@ class Settings:
             anthropic_model=(env("ANTHROPIC_MODEL") or "").strip(),
             openai_api_key=env("OPENAI_API_KEY") or "",
             anthropic_api_key=env("ANTHROPIC_API_KEY") or "",
+            allowed_hosts=LOCAL_HOSTS + tuple(h.strip().lower() for h in (env("ALLOWED_HOSTS") or "").split(",") if h.strip()),
         )

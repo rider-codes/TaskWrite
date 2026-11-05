@@ -35,12 +35,51 @@ SITE_DIR = Path(__file__).resolve().parent.parent / "site"
 LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
 
 
+def _split_host(value: str) -> tuple[str, int | None]:
+    """'localhost:8000' -> ('localhost', 8000); '[::1]:8000' -> ('::1', 8000). Anything unparsable gives ('', None)."""
+    try:
+        parsed = urlparse("//" + value.strip())
+        return (parsed.hostname or "").lower(), parsed.port
+    except ValueError:
+        return "", None
+
+
+def _same_origin(origin: str, host: str, port: int | None, scheme: str) -> bool:
+    """The Origin must be this very page: same scheme family, same host, same port. 'null' and file:// never match."""
+    try:
+        parsed = urlparse(origin.strip())
+        o_host, o_port = (parsed.hostname or "").lower(), parsed.port
+    except ValueError:
+        return False
+    if parsed.scheme not in ("http", "https") or not o_host:
+        return False
+    default = {"http": 80, "https": 443}
+    return o_host == host and (o_port or default[parsed.scheme]) == (port or default.get(scheme, 80))
+
+
 def create_app(settings: Settings | None = None, agent: Agent | None = None) -> FastAPI:
     settings = settings or Settings.from_env()
     if agent is None:
         agent = Agent(Database(settings.db_path, settings.secrets), settings)
     db = agent.db
     app = FastAPI(title="TaskWrite")
+    allowed_hosts = {h.lower().strip("[]") for h in settings.allowed_hosts}
+
+    @app.middleware("http")
+    async def _local_only(request: Request, call_next):
+        """Answer only requests addressed to this computer (stops DNS rebinding), and accept changes only from this
+        app's own pages (stops another site making your browser approve, run or delete things here)."""
+        host, port = _split_host(request.headers.get("host", ""))
+        if host not in allowed_hosts:
+            return JSONResponse({"detail": "This address is not allowed. Open TaskWrite at http://127.0.0.1 or http://localhost."},
+                                status_code=403)
+        if request.method not in ("GET", "HEAD", "OPTIONS"):
+            origin = request.headers.get("origin")
+            if origin is not None and not _same_origin(origin, host, port, request.url.scheme):
+                return JSONResponse({"detail": "Changes are only accepted from TaskWrite's own page."}, status_code=403)
+            if origin is None and request.headers.get("sec-fetch-site") == "cross-site":
+                return JSONResponse({"detail": "Changes are only accepted from TaskWrite's own page."}, status_code=403)
+        return await call_next(request)
 
     @app.exception_handler(AgentError)
     async def _agent_error(_: Request, exc: AgentError) -> JSONResponse:

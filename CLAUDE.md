@@ -58,6 +58,8 @@ Upload/paste -> extract -> find questions + rules -> editable checklist
 
 11. **Publishing through MCP is built by code, never by the model.** Files for the code answers are created through the VS Code MCP extension (loopback HTTP only, `app/publish.py`): one approval card lists every file with its own tick (files start ticked), each call is hashed when approved and refused if anything changed, every path is checked in code (the extension itself does not stop `../`), nothing is ever overwritten, a temporary marker file proves the server's open folder is the user's workspace folder before anything is created, and every file is read back from disk before it is called "created". Tools that can send, share, delete or run shell commands (`forbidden_reason` in `app/safety.py`) are hidden, cannot be approved, and are refused by `ToolGate` and `McpManager.call` even if the database says "approved". The old VS Code/Word/email launchers remain as fallbacks when no MCP server is configured. A Gmail draft (`workspace-mcp`, `draft_gmail_message` only) goes on the same card, starts unticked, carries the finished answer as its body with no recipient, is refused if the content changed after approval, and is reported as "the server says it saved a draft" because no tool can read a draft back. Only that one Gmail tool is offered; the server is started with the other mail tools disabled, and anything named send, share or delete is blocked in code. A Google Doc (`create_doc` only, `gdocs` server) follows the same rules: unticked, plain text, no folder, never shared, reported as "the server says it created a Google Doc" with its link. MCP `env` values may use `${NAME}` so Google's client ID and secret stay in `.env`, not the config file.
 
+12. **The local server only serves this computer.** Every request's Host must be 127.0.0.1, localhost or [::1] (plus `ALLOWED_HOSTS`), which stops DNS rebinding; any request that changes something must come from the app's own page (same host and port in `Origin`, no `null`/`file://`, no `Sec-Fetch-Site: cross-site`). Scripts without an Origin still work. No CORS headers are sent. Tests in `tests/test_host_origin.py`.
+
 ## 5. Providers and configuration
 
 | Provider | Notes |
@@ -70,7 +72,7 @@ Upload/paste -> extract -> find questions + rules -> editable checklist
 
 All adapters sit behind `ModelProvider` (`generate`, `health_check`; structured output via `generate_structured` with Pydantic validation and a bounded JSON-mode-to-plain-text fallback). Errors are normalised (`auth`, `billing`, `rate_limited`, `timeout`, `model_missing`, `bad_response`, `unreachable`); account problems stop a run at once. Never hard-code a model ID. Reasoning models spend completion tokens thinking, so keep `max_tokens` generous.
 
-**.env** (all optional): `LLM_PROVIDER`, `OLLAMA_BASE_URL`, `OLLAMA_MODEL`, `GEMINI|GROQ|OPENAI|ANTHROPIC_API_KEY` and `_MODEL`, `MAX_AGENT_STEPS`, `DATABASE_URL`, `WORKSPACE_DIR`, `MCP_CONFIG`, `REQUEST_TIMEOUT_S`, `SANDBOX_IMAGE`, `SANDBOX_TIMEOUT_S`, `SANDBOX_DOCKER` (`auto`/`off`). Keys can also be pasted in Settings (memory only).
+**.env** (all optional): `LLM_PROVIDER`, `OLLAMA_BASE_URL`, `OLLAMA_MODEL`, `GEMINI|GROQ|OPENAI|ANTHROPIC_API_KEY` and `_MODEL`, `MAX_AGENT_STEPS`, `DATABASE_URL`, `WORKSPACE_DIR`, `MCP_CONFIG`, `REQUEST_TIMEOUT_S`, `SANDBOX_IMAGE`, `SANDBOX_TIMEOUT_S`, `SANDBOX_DOCKER` (`auto`/`off`), `ALLOWED_HOSTS` (extra host names; loopback is always allowed). Keys can also be pasted in Settings (memory only).
 
 ## 6. Where things live
 

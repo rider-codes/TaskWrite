@@ -72,7 +72,8 @@ def make_agent(tmp_path):
     def _make(provider=None, cap=8, healthy=True, launcher=None, mcp=None, sandbox=None, searcher=None, page_reader=None):
         settings = Settings(database_url=f"sqlite:///{tmp_path / 't.db'}", max_agent_steps=cap,
                             workspace_dir=str(tmp_path / 'ws'), mcp_config=str(tmp_path / 'no_mcp.json'),
-                            sandbox_docker=False)  # tests never depend on Docker being installed
+                            sandbox_docker=False,  # tests never depend on Docker being installed
+                            allowed_hosts=("127.0.0.1", "localhost", "::1", "testserver"))  # TestClient's default host
         provider = provider or FakeProvider()
         status = HealthStatus(ok=healthy, message="ok" if healthy else "Ollama is not reachable.")
         agent = Agent(Database(settings.db_path, settings.secrets), settings,

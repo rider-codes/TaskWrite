@@ -41,6 +41,7 @@ Upload/paste -> extract -> find questions + rules -> editable checklist
 - **Written/maths questions:** answered by the model or the local calculator.
 - **Tools:** `model`, `calculator`, `code_runner`, `vscode`, `word`, `email` (draft only), `web_search`, `read_pages`, plus any MCP tool the user configured.
 - **Ask when stuck:** the model may reply `NEED_INPUT: <question>` (max 5 per session); typed text in the chat answers it, otherwise typed text is added as a hint ("note") for the model.
+- **Change this:** a finished problem can be redone with an instruction (`POST /sessions/{id}/redo`). Only that problem's step is reset; the approved plan and its hash are unchanged, the instruction is a labelled note ("For Q2: ..."), and the redo goes through the normal run loop, budget and approval cards.
 - **Budget:** `MAX_AGENT_STEPS` (default 8) caps model calls, searches, page opens, code runs and fix attempts. At the cap the run pauses and shows what remains; the user adds steps to continue.
 
 ## 4. The rules (each has tests; do not weaken them)
@@ -118,6 +119,6 @@ docs/screenshots/  README images
 - Gemini, OpenAI, Anthropic adapters are tested against mocked responses only (the Gemini test account had no credits).
 - The Browse folder dialog, real VS Code and real Word launches were only tested with fakes.
 - "Tests passed" can be wrong or too easy; question detection is rules-based and unusual layouts may be mis-split (the checklist is editable); some sites block page reading (HTTP 403); the process-limited sandbox is not a hard sandbox; Groq's free tier rate-limits quickly on large exams.
-- Not built: reading PDFs/files linked from results, charts or data files, a per-question retry button, a light theme.
+- Not built: reading PDFs/files linked from results, charts or data files, a light theme.
 
 **Definition of done:** clone, run with Ollama, upload an assignment, approve tools and plan, get a completed deliverable with a requirement report, and export it; switch to a cloud provider without changing code; and the app says clearly when it cannot be trusted to complete a task.

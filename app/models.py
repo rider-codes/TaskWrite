@@ -274,6 +274,11 @@ class AnswerRequest(BaseModel):
     answer: str = Field(min_length=1, max_length=2000)
 
 
+class RedoRequest(BaseModel):
+    requirement_id: str = Field(min_length=1, max_length=16)
+    instruction: str = Field(min_length=1, max_length=5000)
+
+
 class EmailOpenRequest(BaseModel):
     to: str = Field(max_length=320)
     subject: str = Field(max_length=300)

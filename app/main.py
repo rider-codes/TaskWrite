@@ -18,7 +18,7 @@ from .extract import ExtractionError
 from .folder_dialog import pick_folder
 from .keys import KEYED_PROVIDERS
 from .llm import SUPPORTED_PROVIDERS, selected_model
-from .models import (AnswerRequest, ConfirmRequest, ContinueRequest, EmailOpenRequest, KeyUpdate, Requirement, RunRequest,
+from .models import (AnswerRequest, RedoRequest, ConfirmRequest, ContinueRequest, EmailOpenRequest, KeyUpdate, Requirement, RunRequest,
                      SettingsUpdate, ToolApprovals, WorkspaceRequest, NoteRequest, PublishRequest)
 
 class NoCacheStatic(StaticFiles):
@@ -238,6 +238,10 @@ def create_app(settings: Settings | None = None, agent: Agent | None = None) -> 
     @app.post("/api/sessions/{sid}/answer")
     def answer(sid: str, body: AnswerRequest) -> dict:
         return to_public(agent.answer_question(sid, body.answer))
+
+    @app.post("/api/sessions/{sid}/redo")
+    def redo(sid: str, body: RedoRequest) -> dict:
+        return to_public(agent.redo_problem(sid, body.requirement_id, body.instruction))
 
     @app.post("/api/sessions/{sid}/email/open")
     def open_email(sid: str, body: EmailOpenRequest) -> dict:

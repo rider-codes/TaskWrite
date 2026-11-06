@@ -278,6 +278,9 @@
   .prow.run .pst { color:var(--mark); }
   details.pdet > summary { list-style:none; cursor:pointer; } details.pdet > summary::-webkit-details-marker { display:none; }
   details.pdet[open] > summary .prow { border-bottom-color:transparent; }
+  .pchg { flex:none; font:500 11px var(--mono); padding:3px 9px; color:var(--ink-2); border:1px solid var(--line); border-radius:999px; }
+  .pchg:hover:not(:disabled) { color:var(--ink); border-color:var(--ink-2); }
+  .redobox { padding:8px 0 12px 32px; border-bottom:1px solid var(--line); }
   .mpick { display:flex; align-items:center; gap:10px; border:1px solid var(--line); background:var(--card); border-radius:10px; padding:7px 12px; font-size:13px; }
   .mpick .ml { font:500 10px var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
   .subconn { display:flex; align-items:center; gap:8px; padding:6px 0 8px 4px; font-size:12.5px; color:var(--ink-2); border-bottom:1px solid var(--line); }
@@ -743,13 +746,27 @@ function problemRows(s) {
   });
 }
 const STATE_LABEL = {done:'Done', run:'Working…', fail:'Failed', need:'Needs you', wait:'Waiting'};
-function problemRow(x) {
+function problemRow(x, s) {
   const [label, tone] = x.code ? (CODE_BADGE[x.code.status] || ['', '']) : ['', ''];
+  const canChange = s && ['done', 'fail'].includes(x.state) && s.status !== 'running';
+  const change = canChange ? el('button', {className:'ghost sm pchg', textContent:'Change this', title:'Redo only this problem with your instruction',
+    onclick:e => { e.preventDefault(); e.stopPropagation(); ui.redo = ui.redo === x.r.id ? null : x.r.id; renderThread(current, true); }}) : null;
   const head = el('div', {className:'prow ' + x.state},
     el('span', {className:'pic', textContent:{done:'✓', fail:'✕', need:'!'}[x.state] || ''}), el('span', {className:'pid', textContent:x.r.id.toUpperCase()}),
     el('span', {className:'ptx', textContent:x.r.text}), x.code && label ? el('span', {className:'pill ' + tone, textContent:label}) : null,
-    el('span', {className:'pst', textContent:STATE_LABEL[x.state]}));
-  return x.code ? el('details', {className:'pdet'}, el('summary', {}, head), codeCard(x.code)) : head;
+    change, el('span', {className:'pst', textContent:STATE_LABEL[x.state]}));
+  const row = x.code ? el('details', {className:'pdet'}, el('summary', {}, head), codeCard(x.code)) : head;
+  return ui.redo === x.r.id && canChange ? el('div', {}, row, redoBox(x.r)) : row;
+}
+
+function redoBox(r) {   // 'Change this': the backend resets only this problem; the redo then runs through the normal rules
+  const input = el('input', {type:'text', className:'grow', placeholder:`What should change in ${r.id.toUpperCase()}? For example: make it shorter`, ariaLabel:'What to change'});
+  const go = () => { const text = input.value.trim(); if (!text) { ui.errors.redo = 'Type what you want changed first.'; renderThread(current, true); return; }
+    ui.redo = null; act(async () => { await post(`/sessions/${sid}/redo`, {requirement_id:r.id, instruction:text}); return post(`/sessions/${sid}/run`, runBody()); }, 'redo'); };
+  input.onkeydown = e => { if (e.key === 'Enter') go(); };
+  setTimeout(() => input.focus(), 0);
+  return el('div', {className:'redobox'}, el('div', {className:'row'}, input, btn('Redo it', go, 'sm'), btn('Cancel', () => { ui.redo = null; renderThread(current, true); }, 'secondary sm')),
+    el('div', {className:'muted', textContent:'Only this problem is redone. It uses your step budget, and anything that leaves your computer still asks first.'}));
 }
 
 function questionCard(s) {
@@ -818,7 +835,7 @@ function renderWork(s) {
     nodes.push(checklistCard(s, true), connectorsCard(s, true), workspaceCard(s, true), errLine('plan'));
     if (s.plan) nodes.push(planCard(s), errLine('planapprove'));
   } else {
-    nodes.push(el('div', {className:'card'}, el('h3', {textContent:'Problems'}), el('div', {className:'plist'}, ...(rows.length ? rows.map(problemRow) : [el('div', {className:'muted', textContent:'Nothing to show yet.'})]))));
+    nodes.push(el('div', {className:'card'}, el('h3', {textContent:'Problems'}), el('div', {className:'plist'}, ...(rows.length ? rows.map(x => problemRow(x, s)) : [el('div', {className:'muted', textContent:'Nothing to show yet.'})]))), errLine('redo'));
     if (s.plan) {
       const canRun = ['plan_approved', 'interrupted', 'cancelled', 'failed', 'awaiting_input', 'awaiting_confirmation'].includes(s.status) && !s.pending_question && !undecided;
       nodes.push(runCard(s, canRun, running), errLine('run'));

@@ -417,6 +417,51 @@ class Agent:
         self.db.save_session(state)
         return state
 
+    def redo_problem(self, session_id: str, requirement_id: str, instruction: str) -> SessionState:
+        """'Change this': redo one finished problem with the student's instruction.
+
+        Only that problem's work step is reset; the approved plan, its tools and its hash are unchanged, so nothing new
+        is approved here. The instruction is a labelled note (context only, same cap as every note). The redo runs
+        through the normal run loop, so the step budget, ToolGate and every approval card still apply.
+        """
+        state = self.db.load_session(session_id)
+        if state.status == SessionStatus.running:
+            raise AgentError("A run is in progress. Ask for the change after it stops.", 409)
+        if state.plan is None or state.approved_plan_hash is None or state.approved_plan_hash != plan_hash(state.plan):
+            raise AgentError("Approve the plan first; there is nothing to redo yet.", 409)
+        if (state.pending_question or (state.pending_call is not None and state.pending_call.decision is None)
+                or any(i.decision is None for i in state.publish_items)):
+            raise AgentError("Answer the question or make the decision that is waiting first.", 409)
+        req = next((r for r in state.requirements if r.id.lower() == requirement_id.strip().lower()), None)
+        if req is None:
+            raise AgentError(f"There is no problem called '{requirement_id[:16]}'.", 400)
+        steps = [s for s in state.plan.steps if is_work_step(s) and req.id in s.requirement_ids]
+        if not steps:
+            raise AgentError(f"{req.id.upper()} has no step that can be redone.", 400)
+        text = " ".join(instruction.split())[:MAX_NOTE_CHARS]
+        if not text:
+            raise AgentError("Type what you want changed first.", 400)
+        if len(state.user_notes) >= MAX_NOTES:
+            raise AgentError(f"You can add up to {MAX_NOTES} instructions per session.", 409)
+
+        state.user_notes.append(f"For {req.id.upper()}: {text}")
+        redone = {rid for s in steps for rid in s.requirement_ids}
+        for s in steps:
+            s.status, s.output, s.notes, s.repair_attempts = StepStatus.pending, "", "", 0
+        for s in state.plan.steps:  # checking and hand-off run again on the new answers
+            if not is_work_step(s):
+                s.status = StepStatus.pending
+        state.code_results = [c for c in state.code_results if c.requirement_id not in redone]
+        state.deliverable, state.validation, state.limitations = "", None, []
+        state.publish_items, state.publish_results, state.publish_check = [], [], ""
+        state.status = SessionStatus.plan_approved
+        also = sorted(r.upper() for r in redone if r != req.id)
+        state.message = (f"Ready to redo {req.id.upper()} with your instruction. Press Run."
+                         + (f" Its step also covers {', '.join(also)}, so those are redone too." if also else ""))
+        self.db.save_session(state)
+        self.db.log_action(session_id, "redo", f"Redo {req.id.upper()} requested ({len(text)} characters)")
+        return state
+
     def answer_question(self, session_id: str, answer: str) -> SessionState:
         state = self.db.load_session(session_id)
         if state.status != SessionStatus.awaiting_input or not state.pending_question:

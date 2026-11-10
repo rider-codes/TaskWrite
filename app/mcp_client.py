@@ -11,6 +11,7 @@ import asyncio
 import json
 import os
 import re
+import threading
 from contextlib import asynccontextmanager
 from datetime import timedelta
 from pathlib import Path
@@ -221,6 +222,8 @@ class McpManager:
         self._tools: dict[str, list[McpTool]] = {}
         self._errors: dict[str, str] = {}
         self._hidden: dict[str, list[str]] = {}
+        self._lock = threading.Lock()  # one refresh at a time
+        self.connecting = False  # True while a background connect is under way
 
     # --- config and cached state ---------------------------------------------
 
@@ -252,17 +255,34 @@ class McpManager:
     # --- discovery and calls (synchronous wrappers around the async SDK) ------
 
     def refresh(self) -> tuple[list[ServerStatus], list[str]]:
-        servers, _ = self.servers()
-        self._tools = {k: v for k, v in self._tools.items() if k in servers}
-        self._errors = {}
-        self._hidden = {}
-        for name, cfg in servers.items():
-            try:
-                self._tools[name] = asyncio.run(asyncio.wait_for(self._discover(cfg), CONNECT_TIMEOUT_S))
-            except Exception as exc:  # noqa: BLE001 - report any server failure to the user
-                self._tools.pop(name, None)
-                self._errors[name] = redact(_short(exc), self._secrets(cfg))
+        with self._lock:
+            servers, _ = self.servers()
+            self._tools = {k: v for k, v in self._tools.items() if k in servers}
+            self._errors = {}
+            self._hidden = {}
+            for name, cfg in servers.items():
+                try:
+                    self._tools[name] = asyncio.run(asyncio.wait_for(self._discover(cfg), CONNECT_TIMEOUT_S))
+                except Exception as exc:  # noqa: BLE001 - report any server failure to the user
+                    self._tools.pop(name, None)
+                    self._errors[name] = redact(_short(exc), self._secrets(cfg))
         return self.status()
+
+    def refresh_in_background(self) -> threading.Thread:
+        """Connect the listed servers without holding up start-up. A failure is recorded per server, never raised."""
+        self.connecting = True
+
+        def work() -> None:
+            try:
+                self.refresh()
+            except Exception:  # noqa: BLE001 - start-up must never fail because of a connector
+                pass
+            finally:
+                self.connecting = False
+
+        thread = threading.Thread(target=work, name="mcp-autoconnect", daemon=True)
+        thread.start()
+        return thread
 
     async def _discover(self, cfg: ServerConfig) -> list[McpTool]:
         from mcp import ClientSession

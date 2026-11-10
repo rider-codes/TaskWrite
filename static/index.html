@@ -433,7 +433,17 @@ function renderMcp(m) {
     x.hidden && x.hidden.length ? el('div', {className:'warn', textContent:`Blocked by TaskWrite, never used: ${x.hidden.join(', ')}`}) : null)),
     ...m.problems.map(p => el('div', {className:'warn', textContent:p})));
 }
-async function loadMcp() { try { renderMcp(await api('/mcp')); } catch (e) { $('mcpMsg').textContent = 'Could not read MCP status.'; } }
+let mcpWait = null, mcpWasConnecting = false;
+async function loadMcp() {
+  try {
+    const m = await api('/mcp'); renderMcp(m); clearTimeout(mcpWait);
+    const finished = mcpWasConnecting && !m.connecting, started = !mcpWasConnecting && m.connecting;
+    mcpWasConnecting = m.connecting;
+    if (m.connecting) { $('mcpMsg').textContent = 'Connecting to your connectors…'; mcpWait = setTimeout(loadMcp, 2000); }   // the app connects them itself at start-up
+    if (finished && sid && current?.status !== 'running') await openSession(sid);   // offer the newly connected tools
+    else if (started && current) renderThread(current, true);   // only on a change, so typing is never wiped by the 2 s check
+  } catch (e) { $('mcpMsg').textContent = 'Could not read MCP status.'; }
+}
 $('mcpRefresh').onclick = async () => {
   $('mcpErr').textContent = ''; $('mcpMsg').textContent = 'Connecting to your MCP servers (the first run of a server may take a minute)...';
   $('mcpRefresh').disabled = true;
@@ -685,8 +695,8 @@ function connectorsCard(s, editable) {
   CONNECTOR_DEFS.forEach(d => {
     const tools = d.pick(s.tool_requests);
     if (tools.length) blocks.push(...mk(tools[0].name === 'email' ? 'Email draft (your mail app)' : d.name, tools[0].name === 'email' ? 'Opens a draft in your mail app. It never sends' : d.note, tools, d.extra));
-    else blocks.push(el('div', {className:'conn locked'}, el('span', {className:'cn'}, el('b', {textContent:d.name}), el('small', {textContent:d.none})),
-      d.setup && editable ? btn('Set up', () => $('settings').classList.add('open'), 'secondary sm') : el('span', {className:'toggle', textContent:'Off'})));
+    else blocks.push(el('div', {className:'conn locked'}, el('span', {className:'cn'}, el('b', {textContent:d.name}), el('small', {textContent:d.setup && MCPSTATE?.connecting ? 'Connecting…' : d.none})),
+      d.setup && editable && !MCPSTATE?.connecting ? btn('Set up', () => $('settings').classList.add('open'), 'secondary sm') : el('span', {className:'toggle', textContent:'Off'})));
   });
   const local = LOCAL_TOOLS.map(([n, name, note]) => [n, name, note, s.tool_requests.find(t => t.name === n)]).filter(x => x[3])
     .flatMap(([n, name, note, t]) => mk(name, note, [t]));

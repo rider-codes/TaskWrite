@@ -57,13 +57,15 @@ def _same_origin(origin: str, host: str, port: int | None, scheme: str) -> bool:
     return o_host == host and (o_port or default[parsed.scheme]) == (port or default.get(scheme, 80))
 
 
-def create_app(settings: Settings | None = None, agent: Agent | None = None) -> FastAPI:
+def create_app(settings: Settings | None = None, agent: Agent | None = None, autoconnect: bool = False) -> FastAPI:
     settings = settings or Settings.from_env()
     if agent is None:
         agent = Agent(Database(settings.db_path, settings.secrets), settings)
     db = agent.db
     app = FastAPI(title="TaskWrite")
     allowed_hosts = {h.lower().strip("[]") for h in settings.allowed_hosts}
+    # The real app connects the user's listed MCP servers at start-up, in the background (tests opt in).
+    app.state.mcp_thread = agent.mcp.refresh_in_background() if autoconnect else None
 
     @app.middleware("http")
     async def _local_only(request: Request, call_next):
@@ -219,13 +221,13 @@ def create_app(settings: Settings | None = None, agent: Agent | None = None) -> 
     def mcp_status() -> dict:
         servers, problems = agent.mcp.status()
         return {"config_path": str(agent.mcp.config_path.resolve()), "problems": problems,
-                "servers": [s.model_dump() for s in servers]}
+                "connecting": agent.mcp.connecting, "servers": [s.model_dump() for s in servers]}
 
     @app.post("/api/mcp/refresh")
     def mcp_refresh() -> dict:
         servers, problems = agent.mcp.refresh()
         return {"config_path": str(agent.mcp.config_path.resolve()), "problems": problems,
-                "servers": [s.model_dump() for s in servers]}
+                "connecting": agent.mcp.connecting, "servers": [s.model_dump() for s in servers]}
 
     @app.post("/api/sessions/{sid}/mcp/sync")
     def mcp_sync(sid: str) -> dict:
@@ -289,7 +291,7 @@ def create_app(settings: Settings | None = None, agent: Agent | None = None) -> 
 
 def _default_app() -> FastAPI:
     load_dotenv()
-    return create_app()
+    return create_app(autoconnect=True)
 
 
 app = _default_app()

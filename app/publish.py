@@ -25,6 +25,9 @@ DEFAULT_CHECKED = {"file": True, "doc": False, "mail": False}
 MAX_PATH_CHARS = 240
 MAX_SEGMENT_CHARS = 100
 PREVIEW_CHARS = 400
+# A Gmail draft or Google Doc carries the whole approved answer, so these code-built calls get a higher size cap than
+# the one for arguments a model proposes (MAX_ARGS_CHARS in mcp_client).
+PUBLISH_MAX_CHARS = 60_000
 _RESERVED = {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)), *(f"LPT{i}" for i in range(1, 10))}
 _BAD_CHARS = re.compile(r'[<>:"|?*\x00-\x1f]')
 EMAIL_ADDRESS = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
@@ -232,12 +235,10 @@ def mail_args(state: SessionState, tool: McpTool | None, account: str) -> dict[s
     """The exact draft call: a subject and the finished answer as the body. No recipient is ever chosen by TaskWrite
     (the user adds one in Gmail), and nothing but plain text is sent. If the server's tool asks which Google account to
     use (the real one does), it is the address the user put in the server's USER_GOOGLE_EMAIL setting."""
-    from .mcp_client import MAX_ARGS_CHARS
-
     args = {"subject": "Draft: " + Path(state.filename).stem, "body": state.deliverable.strip(), "body_format": "plain"}
     _add_account(args, tool, account, "Gmail")
-    if len(json.dumps(args, ensure_ascii=False)) > MAX_ARGS_CHARS:
-        raise PublishError(f"The answer is too long to save as one Gmail draft (the limit is about {MAX_ARGS_CHARS:,} characters).")
+    if len(json.dumps(args, default=str)) > PUBLISH_MAX_CHARS:
+        raise PublishError(f"The answer is too long to save as one Gmail draft (the limit is about {PUBLISH_MAX_CHARS:,} characters).")
     return args
 
 
@@ -262,12 +263,10 @@ def to_plain_text(markdown: str) -> str:
 
 def doc_args(state: SessionState, tool: McpTool | None, account: str) -> dict[str, str]:
     """The exact create call: a title and the finished essay as plain text. No folder is chosen and nothing is shared."""
-    from .mcp_client import MAX_ARGS_CHARS
-
     args = {"title": Path(state.filename).stem, "content": to_plain_text(state.deliverable)}
     _add_account(args, tool, account, "Google Docs")
-    if len(json.dumps(args, ensure_ascii=False)) > MAX_ARGS_CHARS:
-        raise PublishError(f"The essay is too long to send as one Google Doc (the limit is about {MAX_ARGS_CHARS:,} characters). "
+    if len(json.dumps(args, default=str)) > PUBLISH_MAX_CHARS:
+        raise PublishError(f"The essay is too long to send as one Google Doc (the limit is about {PUBLISH_MAX_CHARS:,} characters). "
                            "Download the .docx instead.")
     return args
 

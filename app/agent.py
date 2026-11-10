@@ -37,7 +37,7 @@ from .providers.base import (GenerateRequest, HealthStatus, ModelProvider, Provi
 from .safety import (forbidden_reason, PlanValidationError, ToolNotApproved, neutralize, plan_hash, redact,
                      require_tool_approved, scan_for_injection, validate_plan_payload)
 from .code_steps import build_files, explanations_markdown
-from .publish import (PublishError, args_hash, build_file_specs, companion_ids, create_args, estimate_publish_calls,
+from .publish import (PUBLISH_MAX_CHARS, PublishError, args_hash, build_file_specs, companion_ids, create_args, estimate_publish_calls,
                       doc_args, doc_item, file_items, is_create_tool_id, is_doc_tool_id, is_mail_tool_id, mail_args, mail_item,
                       offer_mcp_tools, resolve_inside,
                       safe_relative_path)
@@ -896,7 +896,7 @@ class _Run:
             return
         self.gate.use(tool_id, "save a Gmail draft (nothing is sent)" if mail else "create a Google Doc (nothing is shared)", step.id)
         try:
-            res = self.executor.mcp.call(tool_id, args)  # type: ignore[union-attr]
+            res = self.executor.mcp.call(tool_id, args, max_chars=PUBLISH_MAX_CHARS)  # type: ignore[union-attr]
         except McpError as exc:
             self._record(state, step, item, "failed", f"The server could not {'save the draft' if mail else 'create the document'}: {exc}")
             return

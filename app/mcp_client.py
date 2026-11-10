@@ -200,11 +200,11 @@ def _to_tool(server: str, t: Any) -> McpTool | None:
                    input_schema=dict(t.inputSchema or {}), read_only=read_only)
 
 
-def validate_arguments(tool: McpTool, arguments: Any) -> dict[str, Any]:
+def validate_arguments(tool: McpTool, arguments: Any, max_chars: int = MAX_ARGS_CHARS) -> dict[str, Any]:
     """Check model-proposed arguments against the tool's own JSON schema before any call."""
     if not isinstance(arguments, dict):
         raise McpError("Tool arguments must be a JSON object.")
-    if len(json.dumps(arguments, default=str)) > MAX_ARGS_CHARS:
+    if len(json.dumps(arguments, default=str)) > max_chars:
         raise McpError("Tool arguments are too large.")
     try:
         jsonschema.validate(arguments, tool.input_schema or {"type": "object"})
@@ -301,7 +301,9 @@ class McpManager:
                         break
         return found[:MAX_TOOLS_PER_SERVER]
 
-    def call(self, tool_id: str, arguments: dict[str, Any]) -> CallResult:
+    def call(self, tool_id: str, arguments: dict[str, Any], max_chars: int = MAX_ARGS_CHARS) -> CallResult:
+        """Call one tool. `max_chars` stays at the small default for anything a model proposed; only publish calls,
+        which code builds from text the user approved, pass a higher cap."""
         servers, _ = self.servers()
         server, name = split_mcp_id(tool_id)
         if (why := forbidden_reason(name)):
@@ -312,7 +314,7 @@ class McpManager:
         tool = self.get_tool(tool_id)
         if tool is None:
             raise McpError(f"Tool '{tool_id}' was not discovered on server '{server}'. Refresh MCP first.")
-        validate_arguments(tool, arguments)
+        validate_arguments(tool, arguments, max_chars)
         try:
             return asyncio.run(asyncio.wait_for(self._call(cfg, name, arguments), CALL_TIMEOUT_S + 15))
         except McpError:

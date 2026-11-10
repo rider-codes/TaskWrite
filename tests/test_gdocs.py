@@ -190,7 +190,7 @@ def test_without_a_configured_account_no_doc_is_offered_and_nothing_is_called(tm
 
 def test_an_essay_too_long_for_one_call_is_not_offered_and_says_why(tmp_path, make_agent, monkeypatch):
     from conftest import default_responder
-    e = Env(tmp_path, make_agent, monkeypatch, provider=FakeProvider(lambda req: "### Q1\n" + "word " * 2500))
+    e = Env(tmp_path, make_agent, monkeypatch, provider=FakeProvider(lambda req: "### Q1\n" + "word " * 15000))  # about 75,000 characters: over the publish cap
     sid, state = e.run_to_card()
     assert not state.publish_items and "too long" in " ".join(state.tool_results).lower()
     assert e.names_called() == []
@@ -218,3 +218,26 @@ def test_a_gmail_draft_and_a_doc_share_one_card_and_neither_starts_ticked(tmp_pa
     state = e.approve_and_run(sid, item_ids=["d1", "m1"])
     assert e.names_called() == ["create_doc"] and e.calls(e.gmail_log)[0]["name"] == "draft_gmail_message"
     assert {r.role: r.status for r in state.publish_results} == {"mail": "created", "doc": "created"}
+
+
+# --- long essays: publish calls are built by code from approved text, so they get their own, higher size cap --------
+
+LONG = "### Q1\n" + ("Bees matter to farming because they pollinate crops. " * 240)  # about 12,700 characters
+
+
+def test_a_long_essay_is_saved_whole_as_a_doc_and_a_draft(tmp_path, make_agent, monkeypatch):
+    e = Env(tmp_path, make_agent, monkeypatch, with_gmail=True, provider=FakeProvider(lambda req: LONG))
+    sid, state = e.run_to_card(tools=("model", DOC_TOOL, MAIL_TOOL))
+    assert {i.role for i in state.publish_items} == {"doc", "mail"}
+    state = e.approve_and_run(sid, item_ids=["d1", "m1"])
+    assert {r.role: r.status for r in state.publish_results} == {"mail": "created", "doc": "created"}
+    assert len(e.calls()[0]["args"]["content"]) > 12000 and len(e.calls(e.gmail_log)[0]["args"]["body"]) > 12000
+
+
+def test_arguments_a_model_proposes_keep_the_small_cap(env):
+    from app.mcp_client import MAX_ARGS_CHARS
+    from app.publish import PUBLISH_MAX_CHARS
+    assert MAX_ARGS_CHARS == 8000 and PUBLISH_MAX_CHARS > MAX_ARGS_CHARS
+    with pytest.raises(McpError, match="too large"):
+        env.manager.call(DOC_TOOL, {"user_google_email": ACCOUNT, "title": "t", "content": "x" * 9000})  # no raised cap asked for
+    assert env.names_called() == []

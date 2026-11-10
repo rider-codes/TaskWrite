@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS action_log (
     result TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS pending_notes (id INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT NOT NULL, text TEXT NOT NULL);
 """
 
 
@@ -98,7 +99,28 @@ class Database:
         """Remove a chat and its action log from the database. Files already saved in a workspace are not touched."""
         with self._conn() as conn:
             conn.execute("DELETE FROM action_log WHERE session_id=?", (session_id,))
+            conn.execute("DELETE FROM pending_notes WHERE session_id=?", (session_id,))
             return conn.execute("DELETE FROM sessions WHERE id=?", (session_id,)).rowcount == 1
+
+    # --- notes typed while a run is going: kept apart from the session state the run is saving ----------------
+
+    def queue_note(self, session_id: str, text: str) -> None:
+        with self._conn() as conn:
+            conn.execute("INSERT INTO pending_notes (session_id, text) VALUES (?, ?)", (session_id, text))
+
+    def queued_notes(self, session_id: str) -> list[str]:
+        with self._conn() as conn:
+            rows = conn.execute("SELECT text FROM pending_notes WHERE session_id=? ORDER BY id", (session_id,)).fetchall()
+        return [r["text"] for r in rows]
+
+    def take_notes(self, session_id: str) -> list[str]:
+        """Remove and return the queued notes in one transaction, so none is taken twice or dropped."""
+        with self._conn() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            rows = conn.execute("SELECT id, text FROM pending_notes WHERE session_id=? ORDER BY id", (session_id,)).fetchall()
+            if rows:
+                conn.execute("DELETE FROM pending_notes WHERE session_id=? AND id<=?", (session_id, rows[-1]["id"]))
+        return [r["text"] for r in rows]
 
     def transition(self, session_id: str, allowed_from: set[SessionStatus], to: SessionStatus) -> bool:
         """Atomically change status only if the current status is allowed."""

@@ -63,6 +63,12 @@ def create_app(settings: Settings | None = None, agent: Agent | None = None, aut
         agent = Agent(Database(settings.db_path, settings.secrets), settings)
     db = agent.db
     app = FastAPI(title="TaskWrite")
+    def public(state) -> dict:
+        """What the page gets: the session, plus any notes still waiting for the next step."""
+        data = to_public(state)
+        data["queued_notes"] = db.queued_notes(state.id)
+        return data
+
     allowed_hosts = {h.lower().strip("[]") for h in settings.allowed_hosts}
     # The real app connects the user's listed MCP servers at start-up, in the background (tests opt in).
     app.state.mcp_thread = agent.mcp.refresh_in_background() if autoconnect else None
@@ -153,19 +159,19 @@ def create_app(settings: Settings | None = None, agent: Agent | None = None, aut
     @app.post("/api/sessions")
     async def upload(file: UploadFile = File(...)) -> dict:
         data = await file.read(settings.max_upload_bytes + 1)
-        return to_public(agent.create_session(file.filename or "upload", data))
+        return public(agent.create_session(file.filename or "upload", data))
 
     @app.post("/api/sessions/{sid}/publish")
     def post_publish(sid: str, body: PublishRequest) -> dict:
-        return to_public(agent.confirm_publish(sid, body.approve, body.item_ids))
+        return public(agent.confirm_publish(sid, body.approve, body.item_ids))
 
     @app.post("/api/sessions/{sid}/notes")
     def post_note(sid: str, body: NoteRequest) -> dict:
-        return to_public(agent.add_note(sid, body.text))
+        return public(agent.add_note(sid, body.text))
 
     @app.put("/api/sessions/{sid}/workspace")
     def put_workspace(sid: str, body: WorkspaceRequest) -> dict:
-        return to_public(agent.set_workspace(sid, body.path))
+        return public(agent.set_workspace(sid, body.path))
 
     @app.get("/api/workspace/browse")
     def browse_workspace() -> dict:
@@ -183,39 +189,39 @@ def create_app(settings: Settings | None = None, agent: Agent | None = None, aut
 
     @app.get("/api/sessions/{sid}")
     def get_session(sid: str) -> dict:
-        return to_public(db.load_session(sid))
+        return public(db.load_session(sid))
 
     @app.put("/api/sessions/{sid}/checklist")
     def put_checklist(sid: str, items: list[Requirement]) -> dict:
-        return to_public(agent.update_checklist(sid, items))
+        return public(agent.update_checklist(sid, items))
 
     @app.post("/api/sessions/{sid}/checklist/refine")
     def refine(sid: str) -> dict:
-        return to_public(agent.refine_checklist(sid))
+        return public(agent.refine_checklist(sid))
 
     @app.put("/api/sessions/{sid}/tools")
     def put_tools(sid: str, body: ToolApprovals) -> dict:
-        return to_public(agent.set_tool_approvals(sid, body.approvals))
+        return public(agent.set_tool_approvals(sid, body.approvals))
 
     @app.post("/api/sessions/{sid}/plan")
     def make_plan(sid: str) -> dict:
-        return to_public(agent.generate_plan(sid))
+        return public(agent.generate_plan(sid))
 
     @app.put("/api/sessions/{sid}/plan")
     def put_plan(sid: str, body: dict) -> dict:
-        return to_public(agent.update_plan(sid, body))
+        return public(agent.update_plan(sid, body))
 
     @app.post("/api/sessions/{sid}/plan/approve")
     def approve(sid: str) -> dict:
-        return to_public(agent.approve_plan(sid))
+        return public(agent.approve_plan(sid))
 
     @app.post("/api/sessions/{sid}/run")
     def run(sid: str, body: RunRequest) -> dict:
-        return to_public(agent.start_run(sid, body.mode, body.consent_cloud))
+        return public(agent.start_run(sid, body.mode, body.consent_cloud))
 
     @app.post("/api/sessions/{sid}/continue")
     def continue_(sid: str, body: ContinueRequest) -> dict:
-        return to_public(agent.continue_run(sid, body.extra_steps, body.mode, body.consent_cloud))
+        return public(agent.continue_run(sid, body.extra_steps, body.mode, body.consent_cloud))
 
     @app.get("/api/mcp")
     def mcp_status() -> dict:
@@ -231,27 +237,27 @@ def create_app(settings: Settings | None = None, agent: Agent | None = None, aut
 
     @app.post("/api/sessions/{sid}/mcp/sync")
     def mcp_sync(sid: str) -> dict:
-        return to_public(agent.sync_mcp_tools(sid))
+        return public(agent.sync_mcp_tools(sid))
 
     @app.post("/api/sessions/{sid}/confirm")
     def confirm(sid: str, body: ConfirmRequest) -> dict:
-        return to_public(agent.confirm_call(sid, body.approve))
+        return public(agent.confirm_call(sid, body.approve))
 
     @app.post("/api/sessions/{sid}/answer")
     def answer(sid: str, body: AnswerRequest) -> dict:
-        return to_public(agent.answer_question(sid, body.answer))
+        return public(agent.answer_question(sid, body.answer))
 
     @app.post("/api/sessions/{sid}/redo")
     def redo(sid: str, body: RedoRequest) -> dict:
-        return to_public(agent.redo_problem(sid, body.requirement_id, body.instruction))
+        return public(agent.redo_problem(sid, body.requirement_id, body.instruction))
 
     @app.post("/api/sessions/{sid}/email/open")
     def open_email(sid: str, body: EmailOpenRequest) -> dict:
-        return to_public(agent.open_email(sid, body))
+        return public(agent.open_email(sid, body))
 
     @app.post("/api/sessions/{sid}/cancel")
     def cancel(sid: str) -> dict:
-        return to_public(agent.cancel(sid))
+        return public(agent.cancel(sid))
 
     @app.get("/api/sessions/{sid}/log")
     def get_log(sid: str) -> list:

@@ -207,6 +207,7 @@ class SessionState(BaseModel):
     message: str = ""
     pending_question: str = ""
     pending_step_id: str = ""
+    pending_options: list[str] = Field(default_factory=list)  # suggested answers the student can tap
     answers: list[QA] = Field(default_factory=list)
     email_draft: EmailDraft | None = None
     workspace_dir: str = ""

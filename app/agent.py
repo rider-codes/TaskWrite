@@ -102,6 +102,14 @@ def is_work_step(step: PlanStep) -> bool:
     return step.kind not in NODE_KINDS
 
 
+def absorb_notes(db: Database, state: SessionState) -> bool:
+    """Move notes typed during a run into the session's notes (up to the cap). The caller saves the state."""
+    taken = db.take_notes(state.id)
+    room = max(0, MAX_NOTES - len(state.user_notes))
+    state.user_notes.extend(taken[:room])
+    return bool(taken)
+
+
 def to_public(state: SessionState) -> dict:
     data = state.model_dump(mode="json", exclude={"text"})
     data["text_preview"] = state.text[:3000]
@@ -249,12 +257,18 @@ class Agent:
     def add_note(self, session_id: str, text: str) -> SessionState:
         """A typed hint from the user (for example "use recursion"). It is passed to the model as context only:
         it cannot approve tools, change the plan, or raise the budget."""
-        state = self._editable(session_id)
+        state = self.db.load_session(session_id)
         note = " ".join(text.split())[:MAX_NOTE_CHARS]
         if not note:
             raise AgentError("Type a note first.", 400)
-        if len(state.user_notes) >= MAX_NOTES:
+        if len(state.user_notes) + len(self.db.queued_notes(session_id)) >= MAX_NOTES:
             raise AgentError(f"You can add up to {MAX_NOTES} notes per session.", 409)
+        if state.status == SessionStatus.running:
+            # The run is saving this session's state, so the note waits in its own queue; the next step picks it up.
+            self.db.queue_note(session_id, note)
+            self.db.log_action(session_id, "note", f"User note queued during the run ({len(note)} characters)")
+            return state
+        absorb_notes(self.db, state)  # any note left queued by a run that ended first
         state.user_notes.append(note)
         self.db.save_session(state)
         self.db.log_action(session_id, "note", f"User note added ({len(note)} characters)")
@@ -346,6 +360,7 @@ class Agent:
             raise AgentError("Another run is already active for this session.", 409)
         self.db.set_cancel(session_id, False)
         state = self.db.load_session(session_id)
+        absorb_notes(self.db, state)  # a note a previous run never got to
         state.mode = mode  # type: ignore[assignment]
         state.provider, state.model = ("rule_based", "") if provider is None else (provider.name, provider.model)
         for step in state.plan.steps:  # type: ignore[union-attr]
@@ -441,6 +456,7 @@ class Agent:
         text = " ".join(instruction.split())[:MAX_NOTE_CHARS]
         if not text:
             raise AgentError("Type what you want changed first.", 400)
+        absorb_notes(self.db, state)
         if len(state.user_notes) >= MAX_NOTES:
             raise AgentError(f"You can add up to {MAX_NOTES} instructions per session.", 409)
 
@@ -471,7 +487,7 @@ class Agent:
             if step.id == state.pending_step_id and step.status == StepStatus.needs_input:
                 step.status = StepStatus.pending
         self.db.log_action(session_id, "answer", f"User answered: {state.pending_question[:120]}")
-        state.pending_question, state.pending_step_id = "", ""
+        state.pending_question, state.pending_step_id, state.pending_options = "", "", []
         self.db.save_session(state)
         return state
 
@@ -598,6 +614,7 @@ class _Run:
 
     def _attempt(self, state: SessionState, step: PlanStep, feedback: str = "") -> None:
         """Run one step through the executor and record the outcome. Sets self.halt on stop."""
+        absorb_notes(self.db, state)  # instructions typed while the previous step was running
         step.status = StepStatus.running
         self.db.save_session(state)
         try:
@@ -644,6 +661,7 @@ class _Run:
             if result.status == StepStatus.needs_input:
                 step.status, step.output, step.notes = StepStatus.needs_input, "", result.notes
                 state.pending_question, state.pending_step_id = result.notes, step.id
+                state.pending_options = list(result.options)
                 self.halt, self.halt_msg = "input", result.notes
                 self.db.log_action(self.id, "question", result.notes, "waiting for user", step_id=step.id)
                 self.db.save_session(state)
@@ -1092,6 +1110,7 @@ class _Run:
 
     def finalize(self) -> None:
         state = self._state()
+        absorb_notes(self.db, state)  # typed during the last step: kept for the next run or redo, never lost
         state.deliverable = self._assemble(state)
         if state.validation is None or self.halt:
             state.validation = check_requirements(state)

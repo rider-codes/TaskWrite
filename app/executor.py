@@ -36,8 +36,31 @@ SYSTEM_PROMPT = (
 ASK_RULE = (
     "\n\nIf you cannot complete a part without information only the student can supply (for example a "
     "missing dataset, a personal opinion or experience, or a choice between topics), do not guess. Reply "
-    "with exactly one line: NEED_INPUT: <your question for the student>, and nothing else."
+    "with exactly one line: NEED_INPUT: <your question for the student>, and nothing else. If the answer is a "
+    "choice, you may add one more line with two to four short choices: OPTIONS: first choice | second choice"
 )
+MAX_OPTIONS, MAX_OPTION_CHARS = 4, 80
+
+
+def parse_question(text: str) -> tuple[str, list[str]]:
+    """Split a NEED_INPUT reply into the question and its optional tap-to-answer choices.
+
+    The choices are only suggestions written by the model: at most four, short, no blanks or repeats, and fewer
+    than two means none. The student can always type something else.
+    """
+    body = text.split(":", 1)[1] if ":" in text else ""
+    mark = re.search(r"OPTIONS\s*:", body, re.I)
+    head, tail = (body[:mark.start()], body[mark.end():]) if mark else (body, "")
+    question = (head.strip().splitlines() or [""])[0].strip()[:500] or "More information is needed."
+    first = (tail.strip().splitlines() or [""])[0]
+    options: list[str] = []
+    for raw in first.split("|"):
+        option = " ".join(raw.split())[:MAX_OPTION_CHARS]
+        if option and option not in options:
+            options.append(option)
+    options = options[:MAX_OPTIONS]
+    return question, (options if len(options) >= 2 else [])
+
 MAX_QUESTIONS = 5  # per session; after this the model is told to proceed without asking
 DECIDE_SYSTEM = (
     "You decide whether to call ONE tool to gather information that a student's assignment needs. "
@@ -96,6 +119,7 @@ class StepResult:
     pending_call: PendingCall | None = None
     clear_pending: bool = False
     halt_budget: bool = False
+    options: list[str] = field(default_factory=list)  # tap-to-answer choices for a question
     code_results: list[CodeResult] = field(default_factory=list)
     sources: list[Source] = field(default_factory=list)
     page_excerpts: dict[str, str] = field(default_factory=dict)  # source url -> text of the opened page
@@ -276,8 +300,8 @@ class Executor:
         if step.kind in (ActionKind.draft_document, ActionKind.explain):
             output = normalize_citations(output)
         if can_ask and output.upper().startswith("NEED_INPUT:"):
-            question = output.split(":", 1)[1].strip().splitlines()[0][:500] or "More information is needed."
-            return StepResult("", StepStatus.needs_input, question, retryable=False)
+            question, options = parse_question(output)
+            return StepResult("", StepStatus.needs_input, question, retryable=False, options=options)
         notes = ""
         if step.kind.value == "generate_code" and "code_runner" in step.tools:
             output, notes = self._run_code(step, output)

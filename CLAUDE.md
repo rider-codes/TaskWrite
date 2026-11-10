@@ -22,7 +22,7 @@ python -m venv .venv && .venv\Scripts\activate     # macOS/Linux: source .venv/b
 pip install -r requirements-dev.txt
 copy .env.example .env                              # add keys only if you want a cloud model
 uvicorn app.main:app --reload                       # website: /   app: /app
-pytest                                              # ~45 s, needs no network, key or Docker
+pytest                                              # ~4 min, needs no network, key or Docker
 python -m app.sandbox_check                         # shows which code isolation you really have
 ```
 
@@ -40,8 +40,9 @@ Upload/paste -> extract -> find questions + rules -> editable checklist
 - **Essays:** optional research step. The model proposes up to 3 topic-only search queries; the user sees them and approves before anything is sent. Optional second step opens up to 3 result pages (addresses approved first). The essay may cite only the numbered sources found (`[S1]`); invented citations fail validation and trigger a bounded rewrite. Output ends with a Sources section and a "How I approached this" note.
 - **Written/maths questions:** answered by the model or the local calculator.
 - **Tools:** `model`, `calculator`, `code_runner`, `vscode`, `word`, `email` (draft only), `web_search`, `read_pages`, plus any MCP tool the user configured.
-- **Ask when stuck:** the model may reply `NEED_INPUT: <question>` (max 5 per session); typed text in the chat answers it, otherwise typed text is added as a hint ("note") for the model.
+- **Ask when stuck:** the model may reply `NEED_INPUT: <question>` (max 5 per session), optionally with `OPTIONS: a | b` (two to four short choices, cleaned in code, shown as tap-to-answer buttons). Typed text in the chat box answers it; otherwise typed text is a note (context only, max 10). A note typed during a run waits in its own table (`pending_notes`) and the next step picks it up, so the running step's state is never overwritten.
 - **Change this:** a finished problem can be redone with an instruction (`POST /sessions/{id}/redo`). Only that problem's step is reset; the approved plan and its hash are unchanged, the instruction is a labelled note ("For Q2: ..."), and the redo goes through the normal run loop, budget and approval cards.
+- **Start-up:** the real app connects the MCP servers listed in the config on a background thread (`autoconnect`; tests opt in), so connectors are ready without pressing Connect. `start.bat` launches it on Windows.
 - **Budget:** `MAX_AGENT_STEPS` (default 8) caps model calls, searches, page opens, code runs and fix attempts. At the cap the run pauses and shows what remains; the user adds steps to continue.
 
 ## 4. The rules (each has tests; do not weaken them)
@@ -57,7 +58,7 @@ Upload/paste -> extract -> find questions + rules -> editable checklist
 9. **Web safety (SSRF guard in `app/web.py`):** only addresses the search returned can be opened; http/https on 80/443; no logins in URLs; every resolved address must be public; every redirect re-checked; non-web content refused; size/time capped; only the first ~3,000 characters kept.
 10. **Never fabricate** citations, sources, results or tool output. If something cannot be done, say why and what remains.
 
-11. **Publishing through MCP is built by code, never by the model.** Files for the code answers are created through the VS Code MCP extension (loopback HTTP only, `app/publish.py`): one approval card lists every file with its own tick (files start ticked), each call is hashed when approved and refused if anything changed, every path is checked in code (the extension itself does not stop `../`), nothing is ever overwritten, a temporary marker file proves the server's open folder is the user's workspace folder before anything is created, and every file is read back from disk before it is called "created". Tools that can send, share, delete or run shell commands (`forbidden_reason` in `app/safety.py`) are hidden, cannot be approved, and are refused by `ToolGate` and `McpManager.call` even if the database says "approved". The old VS Code/Word/email launchers remain as fallbacks when no MCP server is configured. A Gmail draft (`workspace-mcp`, `draft_gmail_message` only) goes on the same card, starts unticked, carries the finished answer as its body with no recipient, is refused if the content changed after approval, and is reported as "the server says it saved a draft" because no tool can read a draft back. Only that one Gmail tool is offered; the server is started with the other mail tools disabled, and anything named send, share or delete is blocked in code. A Google Doc (`create_doc` only, `gdocs` server) follows the same rules: unticked, plain text, no folder, never shared, reported as "the server says it created a Google Doc" with its link. MCP `env` values may use `${NAME}` so Google's client ID and secret stay in `.env`, not the config file.
+11. **Publishing through MCP is built by code, never by the model.** Files for the code answers are created through the VS Code MCP extension (loopback HTTP only, `app/publish.py`): one approval card lists every file with its own tick (files start ticked), each call is hashed when approved and refused if anything changed, every path is checked in code (the extension itself does not stop `../`), nothing is ever overwritten, a temporary marker file proves the server's open folder is the user's workspace folder before anything is created, and every file is read back from disk before it is called "created". Tools that can send, share, delete or run shell commands (`forbidden_reason` in `app/safety.py`) are hidden, cannot be approved, and are refused by `ToolGate` and `McpManager.call` even if the database says "approved". The old VS Code/Word/email launchers remain as fallbacks when no MCP server is configured. A Gmail draft (`workspace-mcp`, `draft_gmail_message` only) goes on the same card, starts unticked, carries the finished answer as its body with no recipient, is refused if the content changed after approval, and is reported as "the server says it saved a draft" because no tool can read a draft back. Only that one Gmail tool is offered; the server is started with the other mail tools disabled, and anything named send, share or delete is blocked in code. A Google Doc (`create_doc` only, `gdocs` server) follows the same rules: unticked, plain text, no folder, never shared, reported as "the server says it created a Google Doc" with its link. These code-built calls may be up to 60,000 characters (`PUBLISH_MAX_CHARS`); arguments a model proposes keep the 8,000 cap. MCP `env` values may use `${NAME}` so Google's client ID and secret stay in `.env`, not the config file.
 
 12. **The local server only serves this computer.** Every request's Host must be 127.0.0.1, localhost or [::1] (plus `ALLOWED_HOSTS`), which stops DNS rebinding; any request that changes something must come from the app's own page (same host and port in `Origin`, no `null`/`file://`, no `Sec-Fetch-Site: cross-site`). Scripts without an Origin still work. No CORS headers are sent. Tests in `tests/test_host_origin.py`.
 
@@ -93,9 +94,9 @@ app/
   tools.py         tool catalog, calculator, launchers (VS Code/Word/mailto)
   mcp_client.py    MCP servers (local program or loopback HTTP)      publish.py   files created through MCP
   db.py models.py extract.py exporters.py
-static/index.html  chat UI (one file, no build step; deep link /app#sid=<id>&focus=...)
+static/index.html  dashboard + assignment page (one file, no build step; deep link /app#sid=<id>&focus=...)
 site/              marketing site (home + "how it works")
-tests/             ~220 tests incl. 30 eval cases (eval_cases.py)
+tests/             423 tests incl. 30 eval cases (eval_cases.py)
 samples/           synthetic assignments (never real student work)
 docs/screenshots/  README images
 ```
@@ -111,14 +112,15 @@ docs/screenshots/  README images
 
 ## 8. Status and honest limits
 
-**Done and tested (218 tests, 30 eval cases):** five providers, chat UI with history/delete/progress/stop, Python workflow in a Docker sandbox, essay research with page reading, citation checks and rewrite, Word/VS Code/email-draft/MCP hand-offs, prompt-injection and SSRF guards, resumable runs.
+**Done and tested (423 tests, 30 eval cases):** five providers, a dashboard and assignment page (progress bar, problem rows, model picker locked during a run, connectors list, chat box, "Change this"), Python workflow in a Docker sandbox, essay research with page reading, citation checks and rewrite, Word/VS Code/email-draft/MCP hand-offs, prompt-injection and SSRF guards, resumable runs.
 
-**Verified with real services:** Groq (code, essays, search, page reading, email draft, MCP), Docker sandbox, live DuckDuckGo search.
+**Verified with real services:** Groq (code, essays, search, page reading, email draft, MCP, redo, notes during a run), Docker sandbox, live DuckDuckGo search, the VS Code MCP extension, and Gmail drafts and Google Docs through `workspace-mcp` with a real Google account.
 
 **Not verified or weak:**
 - Gemini, OpenAI, Anthropic adapters are tested against mocked responses only (the Gemini test account had no credits).
 - The Browse folder dialog, real VS Code and real Word launches were only tested with fakes.
 - "Tests passed" can be wrong or too easy; question detection is rules-based and unusual layouts may be mis-split (the checklist is editable); some sites block page reading (HTTP 403); the process-limited sandbox is not a hard sandbox; Groq's free tier rate-limits quickly on large exams.
+- The page itself has no automated tests (it is checked by hand in a browser); Gmail and Docs share one Google sign-in whose scopes are broader than the single tool TaskWrite calls.
 - Not built: reading PDFs/files linked from results, charts or data files, a light theme.
 
 **Definition of done:** clone, run with Ollama, upload an assignment, approve tools and plan, get a completed deliverable with a requirement report, and export it; switch to a cloud provider without changing code; and the app says clearly when it cannot be trusted to complete a task.

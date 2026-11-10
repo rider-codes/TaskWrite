@@ -160,7 +160,7 @@
       plan: '<span class="tag">PLAN · STEP 2 OF 3</span><h4>Draft the essay for Word</h4><p>Needs <b>model</b> and <b>word</b>. It asks you which side to argue.</p>' + meter(3),
       code: '<div class="bar"><s></s><s></s><s></s>&nbsp;essay.docx</div><pre class="plain">Remote learning widened access\nfor students far from campus,\nbut it works best when it is\n<span class="c">...drafted, then opened in Word</span></pre>',
       mail: '<span class="tag">WORD COUNT</span><div class="row"><span class="label">Words</span><span>468 / 500</span></div><div class="row"><span class="label">Rule</span><span>max 500: met</span></div><span class="go">Open in Word</span>' },
-    { q: 'Have an email to send?',
+    { q: 'Have an email to draft?',
       assign: '<div class="face"><span class="tag">EMAIL TASK</span><h4>Extension request</h4>' + chk(1, 'To ms.rao@school.edu') + chk(1, 'Ask for two more days') + chk(0, 'Tone: you decide') + '</div>',
       plan: '<span class="tag">PLAN · STEP 1 OF 2</span><h4>Write the email</h4><p>Needs <b>model</b> and <b>email</b>. It only prepares a draft.</p>' + meter(1),
       code: '<div class="bar"><s></s><s></s><s></s>&nbsp;email body</div><pre class="plain">Hello Ms. Rao,\n\nCould I have two more days\nfor the lab report? <span class="c">...</span></pre>',

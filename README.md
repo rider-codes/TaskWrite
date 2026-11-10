@@ -2,7 +2,7 @@
 
 Open-source, local-first AI assignment agent. Upload a PDF/DOCX/TXT assignment; TaskWrite extracts it, builds an editable requirements checklist, asks you to approve tools and a plan, completes the work with your chosen model, validates every requirement, and lets you export the result (.md, .docx, .txt).
 
-Status: Milestones 1-2 (MVP + LangGraph orchestration with resumable runs), plus Gemini and Groq providers and a Python-assessment workflow (generate, run in a restricted environment, fix, explain). Essay writing with web research and Word output is built too; OpenAI and Anthropic adapters are not.
+It works as a harness: plug in a model (local Ollama, or Groq, Gemini, OpenAI or Anthropic with your own key) and switch on the connectors you want (VS Code, web search, Gmail drafts, Google Docs). The model does the work through them, and every outside action asks you first. Groq, Gmail drafts and Google Docs were run end to end with real accounts; the Gemini, OpenAI and Anthropic adapters are tested against mocked responses only.
 
 ## Run it
 
@@ -54,9 +54,16 @@ Upload (or type/paste) a written assignment such as "write an essay on X and cit
 
 Each search and each page opened counts against the step budget. If you decline the search, the essay is written with no sources and told not to invent any. Try it with `samples/essay_assignment.txt`.
 
-## Your chats
+## The dashboard and an assignment page
 
-Every chat is saved on your computer and listed in the sidebar (hover a chat and press the cross, then press it again to delete it for good; this removes the chat and its log from the database but not files already saved in your workspace folder). While a run is working, the progress card shows the step in progress, how many steps are done, the action budget used and the elapsed time. **Cancel** stops after the current step: a model call cannot be interrupted, so the card says "Stopping…" until it ends.
+Run `start.bat` on Windows (or the `uvicorn` command above) and open http://127.0.0.1:8000/app.
+
+- **Dashboard** - every assignment as a card with its status (needs you, running, failed, done) and a progress bar. The chips at the top filter the cards; **New session** attaches or pastes a new assignment. Delete one from the sidebar (press the cross twice); that removes it from the database but not files already saved in your workspace folder.
+- **Assignment page** - one progress bar ("3 of 5 done"), a row per problem (done, working, waiting, failed), and anything that needs you at the top: approvals, or a question from the agent with tap-to-answer choices when it offers them.
+- **Model picker** - shows the provider and model, and lets you switch. It is locked while a run is going, in the backend as well as on the page.
+- **Connectors** - VS Code, Web search, Gmail and Google Docs, each off until you allow it for that assignment. Connectors listed in `mcp_servers.json` are connected automatically when the app starts.
+- **Chat box** - type an instruction at any time. During a run it is queued and the next step picks it up. If the agent asked a question, what you type is your answer.
+- **Change this** - on any finished problem: say what should be different and only that problem is redone, inside the same step budget and approvals.
 
 ## Working in your own apps
 
@@ -67,7 +74,7 @@ Approve the tools the assignment needs and TaskWrite hands the work to them, wit
 - **Email** - an approval screen shows the recipient, subject and body. Only after you confirm does it open a draft in your mail app. TaskWrite never sends email and cannot tell you whether it was sent; you press Send.
 - **Questions** - if the model cannot continue without information only you have, the run pauses and asks you.
 
-Free by default (local Ollama). Gemini and Groq work with your own API key.
+Free by default (local Ollama). Groq, Gemini, OpenAI and Anthropic work with your own API key.
 
 ## Create the code files through VS Code (optional, MCP)
 
@@ -113,7 +120,7 @@ Uses the same Google client and `USER_GOOGLE_EMAIL` as the Gmail draft above.
 
 Using both Gmail drafts and Google Docs? Sign in **once for both** (start `workspace-mcp` with `--permissions gmail:drafts docs:full` and run its sign-in). Both servers share one saved sign-in per Google address, so signing in for one service alone replaces the other's permission.
 
-Only `create_doc` is offered; the server is started with its reading, editing and listing tools switched off, and anything named share or delete is blocked in code. The "Save as a Google Doc" box starts **unticked**. The essay goes in as plain text (Markdown markers removed), with no folder and no sharing. TaskWrite cannot open the document to check it, so it says "the server says it created a Google Doc" and shows the link. Very long essays (over about 8,000 characters) are not sent; download the .docx instead. Google's token for this is broad (it can read and edit all your docs), so revoke it at https://myaccount.google.com/permissions when you stop using it.
+Only `create_doc` is offered; the server is started with its reading, editing and listing tools switched off, and anything named share or delete is blocked in code. The "Save as a Google Doc" box starts **unticked**. The essay goes in as plain text (Markdown markers removed), with no folder and no sharing. TaskWrite cannot open the document to check it, so it says "the server says it created a Google Doc" and shows the link. Very long essays (over about 60,000 characters) are not sent; download the .docx instead. Google's token for this is broad (it can read and edit all your docs), so revoke it at https://myaccount.google.com/permissions when you stop using it.
 
 ## MCP tools
 
@@ -135,14 +142,15 @@ The model only proposes tool calls. The backend checks approval and the tool's o
 - Results are labelled honestly: "verified" only when a tool computed it; otherwise "addressed, not verified". Citations are never verified.
 - Generated Python only runs after you approve the code runner, in Docker when available, otherwise in a restricted process (see above). The restricted-process fallback is **not** a hardened sandbox.
 - API keys live in memory or your `.env`; they are redacted from logs and errors and never returned by the API.
+- The server only answers requests addressed to this computer (127.0.0.1, localhost), and only accepts changes from its own page, so another website cannot read your sessions or press buttons for you.
 
 ## Screenshots
 
 | | |
 | --- | --- |
-| ![A new chat](docs/screenshots/01-new-chat.png) | ![Checklist and tool approvals](docs/screenshots/02-review-checklist-and-tools.png) |
-| ![Web search approval](docs/screenshots/03-web-search-approval.png) | ![Code results](docs/screenshots/04-code-results.png) |
-| ![Essay sources](docs/screenshots/05-essay-sources.png) | ![Settings](docs/screenshots/06-settings-providers.png) |
+| ![Dashboard](docs/screenshots/01-dashboard.png) | ![Checklist and connectors](docs/screenshots/02-checklist-connectors.png) |
+| ![Web search approval](docs/screenshots/03-web-search-approval.png) | ![Problems and progress](docs/screenshots/04-problems-and-code.png) |
+| ![Essay sources](docs/screenshots/05-essay-sources.png) | ![Phone width](docs/screenshots/06-phone.png) |
 
 These are from real runs of the synthetic samples in `samples/`.
 

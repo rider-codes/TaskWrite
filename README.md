@@ -166,6 +166,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
 Known gaps: only the first part of an opened page is read; question detection is rules-based, so unusual exam layouts can still be split wrongly (check the checklist, it is editable); the process-limited code sandbox is not a hard sandbox without Docker. Groq was run end to end with a real key. The Gemini, OpenAI and Anthropic adapters are tested against mocked responses only (the Gemini test account had no credits), so run each once with your own key to confirm.
 
+## Publish the website
+
+The marketing site is the static `site/` folder (no build step, nothing in it talks to the app). On **Vercel**: import the repository and leave the settings alone; `vercel.json` already sets the output folder to `site`. On **Render**: New, then Blueprint, and pick the repository; `render.yaml` creates a free static site that publishes `site/`. The app itself (`/app`) is not part of the site: it runs on your own computer.
+
 ## License
 
 [MIT](LICENSE). Use it, change it and share it freely; it comes with no warranty.

@@ -1,0 +1,17 @@
+# Publishes only the marketing site (the site/ folder) as a static site. The app itself runs on your own computer.
+services:
+  - type: web
+    name: taskwrite-site
+    runtime: static
+    buildCommand: echo "no build needed"
+    staticPublishPath: ./site
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin

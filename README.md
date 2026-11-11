@@ -165,3 +165,7 @@ The suite needs no network, API key or Docker. It includes 30 synthetic evaluati
 See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
 Known gaps: only the first part of an opened page is read; question detection is rules-based, so unusual exam layouts can still be split wrongly (check the checklist, it is editable); the process-limited code sandbox is not a hard sandbox without Docker. Groq was run end to end with a real key. The Gemini, OpenAI and Anthropic adapters are tested against mocked responses only (the Gemini test account had no credits), so run each once with your own key to confirm.
+
+## License
+
+[MIT](LICENSE). Use it, change it and share it freely; it comes with no warranty.

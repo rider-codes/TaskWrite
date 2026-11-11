@@ -1,5 +1,7 @@
 # TaskWrite
 
+**Website:** https://task-write.vercel.app
+
 Open-source, local-first AI assignment agent. Upload a PDF/DOCX/TXT assignment; TaskWrite extracts it, builds an editable requirements checklist, asks you to approve tools and a plan, completes the work with your chosen model, validates every requirement, and lets you export the result (.md, .docx, .txt).
 
 It works as a harness: plug in a model (local Ollama, or Groq, Gemini, OpenAI or Anthropic with your own key) and switch on the connectors you want (VS Code, web search, Gmail drafts, Google Docs). The model does the work through them, and every outside action asks you first. Groq, Gmail drafts and Google Docs were run end to end with real accounts; the Gemini, OpenAI and Anthropic adapters are tested against mocked responses only.
@@ -168,7 +170,7 @@ Known gaps: only the first part of an opened page is read; question detection is
 
 ## Publish the website
 
-The marketing site is the static `site/` folder (no build step, nothing in it talks to the app). On **Vercel**: import the repository and leave the settings alone; `vercel.json` already sets the output folder to `site`. On **Render**: New, then Blueprint, and pick the repository; `render.yaml` creates a free static site that publishes `site/`. The app itself (`/app`) is not part of the site: it runs on your own computer.
+It is live at https://task-write.vercel.app (Vercel, from the `site/` folder; every push to `main` redeploys it). The marketing site is the static `site/` folder (no build step, nothing in it talks to the app). On **Vercel**: import the repository and leave the settings alone; `vercel.json` already sets the output folder to `site`. On **Render**: New, then Blueprint, and pick the repository; `render.yaml` creates a free static site that publishes `site/`. The app itself (`/app`) is not part of the site: it runs on your own computer.
 
 ## License
 
